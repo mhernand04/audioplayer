@@ -1,0 +1,113 @@
+//snippet
+    @Override
+    public void onPrepare() {
+        super.onPrepare();
+
+        prepareState();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            async = CompletableFuture
+                    .runAsync(() -> player.prepare())
+                    .thenRunAsync(() -> setTransportControlsCommand());
+        } else {
+            var thread = new Thread(() -> {
+                player.prepare();
+                setTransportControlsCommand();
+            });
+            thread.start();
+        }
+
+        Log.d(TAG, "onPrepare()");
+    }
+
+    @Override
+    public void onCommand(String command, Bundle extras, ResultReceiver cb) {
+        super.onCommand(command, extras, cb);
+
+        prepareState();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            async = CompletableFuture
+                    .runAsync(() -> player.prepare(command, extras))
+                    .thenRunAsync(() -> {
+                        setTransportControlsCommand();
+                        if (command.equals(COMMAND_FOURIER)) {
+                            setFourier();
+                        }
+                    });
+        } else {
+            var thread = new Thread(() -> {
+                player.prepare(command, extras);
+                setTransportControlsCommand();
+                if (command.equals(COMMAND_FOURIER)) {
+                    setFourier();
+                }
+            });
+            thread.start();
+        }
+
+        Log.d(TAG, "onCommand(...)");
+    }
+
+    @Override
+    public void onPlay() {
+        super.onPlay();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            async.thenRunAsync(() -> playSetup());
+        } else {
+            var thread = new Thread(() -> playSetup());
+            thread.start();
+        }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            async.thenRunAsync(() -> stopSetup());
+        } else {
+            var thread = new Thread(() -> stopSetup());
+            thread.start();
+        }
+
+        Log.d(TAG, "onStop()");
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            async.thenRunAsync(() -> pauseAsync());
+        } else {
+            var thread = new Thread(() -> pauseAsync());
+            thread.start();
+        }
+
+        Log.d(TAG, "onPause()");
+    }
+
+    @Override
+    public void onSeekTo(long pos) {
+        super.onSeekTo(pos);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            async.thenRunAsync(() -> {
+                try {
+                    player.seek(pos);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+        } else {
+            var thread = new Thread(() -> {
+                try {
+                    player.seek(pos);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            thread.start();
+        }
+    }
+};
